@@ -91,13 +91,28 @@ function displayBanner() {
 	if (isSilentMode()) return;
 
 	// console.clear(); // Removing this to avoid clearing the terminal per command
-	const bannerText = figlet.textSync('Task Master', {
-		font: 'Standard',
-		horizontalLayout: 'default',
-		verticalLayout: 'default'
-	});
 
-	console.log(coolGradient(bannerText));
+	// Try to use figlet, but fall back gracefully if fonts aren't available (e.g., in Bun binary)
+	try {
+		const bannerText = figlet.textSync('Task Master', {
+			font: 'Standard',
+			horizontalLayout: 'default',
+			verticalLayout: 'default'
+		});
+		console.log(coolGradient(bannerText));
+	} catch (error) {
+		// Fallback to simple text banner if figlet fonts aren't available
+		console.log(coolGradient.multiline([
+			'',
+			'  ████████╗ █████╗ ███████╗██╗  ██╗    ███╗   ███╗ █████╗ ███████╗████████╗███████╗██████╗ ',
+			'  ╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝    ████╗ ████║██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗',
+			'     ██║   ███████║███████╗█████╔╝     ██╔████╔██║███████║███████╗   ██║   █████╗  ██████╔╝',
+			'     ██║   ██╔══██║╚════██║██╔═██╗     ██║╚██╔╝██║██╔══██║╚════██║   ██║   ██╔══╝  ██╔══██╗',
+			'     ██║   ██║  ██║███████║██║  ██╗    ██║ ╚═╝ ██║██║  ██║███████║   ██║   ███████╗██║  ██║',
+			'     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝',
+			''
+		].join('\n')));
+	}
 
 	// Add creator credit line below the banner
 	console.log(

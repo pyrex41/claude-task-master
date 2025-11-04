@@ -35,16 +35,9 @@ if (!fs.existsSync(cliPath)) {
 	process.exit(1);
 }
 
-// Find the installed task-master executable
-let installedPath;
-try {
-	installedPath = execSync('which task-master', { encoding: 'utf8' }).trim();
-	console.log(`📦 Found installed task-master: ${installedPath}`);
-} catch (error) {
-	console.error('⚠️  Warning: task-master not installed globally.');
-	console.error('Using local dist/task-master.js instead.');
-	installedPath = cliPath;
-}
+// Always use local dist build to avoid dependency issues with global install
+const installedPath = cliPath;
+console.log(`📦 Using local build: ${installedPath}`);
 
 // Create dist/bin directory if it doesn't exist
 const binDir = path.join(projectRoot, 'dist', 'bin');

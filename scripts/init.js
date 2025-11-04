@@ -70,13 +70,19 @@ function displayBanner() {
 	if (isSilentMode()) return;
 
 	console.clear();
-	const bannerText = figlet.textSync('Task Master AI', {
-		font: 'Standard',
-		horizontalLayout: 'default',
-		verticalLayout: 'default'
-	});
 
-	console.log(coolGradient(bannerText));
+	// Try to use figlet, but fall back gracefully if fonts aren't available (e.g., in Bun binary)
+	try {
+		const bannerText = figlet.textSync('Task Master AI', {
+			font: 'Standard',
+			horizontalLayout: 'default',
+			verticalLayout: 'default'
+		});
+		console.log(coolGradient(bannerText));
+	} catch (error) {
+		// Fallback to simple text banner if figlet fonts aren't available
+		console.log(coolGradient('\n  TASK MASTER AI\n'));
+	}
 
 	// Add creator credit line below the banner
 	console.log(
@@ -838,11 +844,19 @@ function createProjectStructure(
 
 	// Display success message
 	if (!isSilentMode()) {
+		let successBanner;
+		try {
+			successBanner = warmGradient.multiline(
+				figlet.textSync('Success!', { font: 'Standard' })
+			);
+		} catch (error) {
+			// Fallback if figlet fonts aren't available
+			successBanner = warmGradient('SUCCESS!');
+		}
+
 		console.log(
 			boxen(
-				`${warmGradient.multiline(
-					figlet.textSync('Success!', { font: 'Standard' })
-				)}\n${chalk.green('Project initialized successfully!')}`,
+				`${successBanner}\n${chalk.green('Project initialized successfully!')}`,
 				{
 					padding: 1,
 					margin: 1,

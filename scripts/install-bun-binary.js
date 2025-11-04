@@ -73,9 +73,11 @@ async function main() {
 
 	console.log(`📥 Will install to: ${installDir}`);
 	console.log(`\nThis will:`);
-	console.log(`  1. Copy the binary to ${installDir}/task-master-bun`);
-	console.log(`  2. Make it executable`);
-	console.log(`  3. Keep the existing task-master (Node.js version) intact\n`);
+	console.log(`  1. Backup existing task-master to task-master.node`);
+	console.log(`  2. Replace task-master with Bun binary`);
+	console.log(`  3. Make it executable\n`);
+	console.log(`⚠️  You can restore the Node.js version anytime with:`);
+	console.log(`   mv ${installDir}/task-master.node ${installDir}/task-master\n`);
 
 	const answer = await question('Continue? (y/N): ');
 	rl.close();
@@ -85,7 +87,8 @@ async function main() {
 		return;
 	}
 
-	const targetPath = path.join(installDir, 'task-master-bun');
+	const targetPath = path.join(installDir, 'task-master');
+	const backupPath = path.join(installDir, 'task-master.node');
 
 	try {
 		// Check if we need sudo
@@ -93,25 +96,49 @@ async function main() {
 
 		if (needsSudo && (platform === 'darwin' || platform === 'linux')) {
 			console.log('\n🔐 Installation requires sudo privileges...');
+
+			// Backup existing task-master if it exists
+			if (fs.existsSync(targetPath)) {
+				console.log('📦 Backing up Node.js version...');
+				execSync(`sudo mv "${targetPath}" "${backupPath}"`, { stdio: 'inherit' });
+			}
+
+			// Install Bun binary
 			execSync(`sudo cp "${binaryPath}" "${targetPath}"`, { stdio: 'inherit' });
 			execSync(`sudo chmod 755 "${targetPath}"`, { stdio: 'inherit' });
 		} else {
+			// Backup existing task-master if it exists
+			if (fs.existsSync(targetPath)) {
+				console.log('📦 Backing up Node.js version...');
+				fs.renameSync(targetPath, backupPath);
+			}
+
+			// Install Bun binary
 			fs.copyFileSync(binaryPath, targetPath);
 			fs.chmodSync(targetPath, 0o755);
 		}
 
 		console.log(`\n✅ Successfully installed!`);
-		console.log(`\n📍 Binary location: ${targetPath}`);
+		console.log(`\n📍 Bun binary: ${targetPath}`);
+		if (fs.existsSync(backupPath)) {
+			console.log(`📍 Node.js backup: ${backupPath}`);
+		}
 		console.log(`\n💡 Usage:`);
-		console.log(`   task-master-bun list          # Use Bun version (~45% faster)`);
-		console.log(`   task-master list              # Use Node.js version (default)`);
-		console.log(`\n⚡ Tip: Create an alias in your shell:`);
-		console.log(`   alias tm='task-master-bun'`);
-		console.log(`\n   Then use: tm list, tm next, etc.`);
+		console.log(`   task-master list              # Now uses Bun (~45% faster)`);
+		console.log(`   task-master next              # ~45% faster`);
+		console.log(`\n⚡ To restore Node.js version:`);
+		if (needsSudo && (platform === 'darwin' || platform === 'linux')) {
+			console.log(`   sudo mv "${backupPath}" "${targetPath}"`);
+		} else {
+			console.log(`   mv "${backupPath}" "${targetPath}"`);
+		}
 	} catch (error) {
 		console.error('\n❌ Installation failed:');
 		console.error(error.message);
 		console.error('\n💡 Try manual installation:');
+		console.error(`   # Backup Node.js version`);
+		console.error(`   sudo mv "${targetPath}" "${backupPath}"`);
+		console.error(`   # Install Bun binary`);
 		console.error(`   sudo cp "${binaryPath}" "${targetPath}"`);
 		console.error(`   sudo chmod 755 "${targetPath}"`);
 		process.exit(1);

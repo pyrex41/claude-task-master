@@ -238,7 +238,7 @@ npm install task-master-ai
 
 #### Optional: Install Bun Binary for Better Performance ⚡
 
-For ~45% better CLI performance, you can optionally build and install a Bun-compiled binary:
+For ~45% better CLI performance, you can optionally replace the Node.js version with a Bun-compiled binary:
 
 ```bash
 # 1. Install Bun (if not already installed)
@@ -247,31 +247,28 @@ curl -fsSL https://bun.sh/install | bash
 # 2. Build the binary
 npm run build:bun
 
-# 3. Install globally
+# 3. Replace task-master with Bun binary
 npm run install:bun
 ```
 
-After installation, use `task-master-bun` instead of `task-master`:
+After installation, `task-master` will use the faster Bun binary:
 
 ```bash
-task-master-bun list    # ~45% faster
-task-master-bun next    # ~45% faster
-```
-
-Or create an alias for convenience:
-
-```bash
-# Add to your ~/.zshrc or ~/.bashrc
-alias tm='task-master-bun'
-
-# Then use: tm list, tm next, etc.
+task-master list    # Now ~45% faster!
+task-master next    # ~45% faster!
 ```
 
 **Performance comparison:**
 - Node.js version: ~850ms
 - Bun binary: ~470ms (45% faster)
 
-> **Note:** The Bun binary is ~78MB but includes everything needed with no dependencies.
+**To restore Node.js version:**
+```bash
+# The Node.js version is backed up automatically
+sudo mv /opt/homebrew/bin/task-master.node /opt/homebrew/bin/task-master
+```
+
+> **Note:** The Bun binary is ~78MB but includes everything needed with no dependencies. The original Node.js version is backed up to `task-master.node`.
 
 #### Initialize a new project
 

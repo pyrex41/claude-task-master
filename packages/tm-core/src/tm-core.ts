@@ -203,11 +203,15 @@ export class TmCore {
 
 			// Initialize domains based on performance mode
 			if (this._performanceMode === 'solo') {
-				// Solo mode: Lazy-load domains for better performance
-				// Domains will be created when accessed via getters
+				// Solo mode: Initialize only commonly-used TasksDomain, lazy-load others
+				// This provides the best balance of performance and compatibility
+				this._tasks = new TasksDomain(this._configManager);
+				await this._tasks.initialize();
+
+				// Other domains (auth, workflow, git, config, integration) lazy-load on access
 				this._logger.info('TmCore initialized successfully (solo mode - lazy loading enabled)');
 			} else {
-				// Standard mode: Eager initialization for safety and compatibility
+				// Standard mode: Eager initialization of all domains for safety and compatibility
 				this._tasks = new TasksDomain(this._configManager);
 				this._auth = new AuthDomain();
 				this._workflow = new WorkflowDomain(this._configManager);

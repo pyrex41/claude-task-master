@@ -51,18 +51,31 @@ async function main() {
 	const platform = process.platform;
 
 	if (platform === 'darwin' || platform === 'linux') {
-		// Try to find a directory in PATH
-		const pathDirs = process.env.PATH.split(':');
-		const candidateDirs = [
-			'/usr/local/bin',
-			path.join(process.env.HOME, '.local', 'bin'),
-			'/opt/homebrew/bin'
-		].filter((dir) => pathDirs.includes(dir) && fs.existsSync(dir));
+		// First, try to find where task-master is currently installed
+		try {
+			const currentPath = execSync('which task-master', { encoding: 'utf8' }).trim();
+			if (currentPath) {
+				installDir = path.dirname(currentPath);
+				console.log(`📍 Found existing task-master at: ${currentPath}`);
+			}
+		} catch {
+			// task-master not found, use default locations
+		}
 
-		if (candidateDirs.length > 0) {
-			installDir = candidateDirs[0];
-		} else {
-			installDir = '/usr/local/bin';
+		// If not found, try to find a directory in PATH
+		if (!installDir) {
+			const pathDirs = process.env.PATH.split(':');
+			const candidateDirs = [
+				'/opt/homebrew/bin',
+				'/usr/local/bin',
+				path.join(process.env.HOME, '.local', 'bin')
+			].filter((dir) => pathDirs.includes(dir) && fs.existsSync(dir));
+
+			if (candidateDirs.length > 0) {
+				installDir = candidateDirs[0];
+			} else {
+				installDir = '/usr/local/bin';
+			}
 		}
 	} else if (platform === 'win32') {
 		installDir = path.join(process.env.APPDATA, 'npm');

@@ -12,6 +12,8 @@
 	"workspaces": ["apps/*", "packages/*", "."],
 	"scripts": {
 		"build": "npm run build:build-config && cross-env NODE_ENV=production tsdown",
+		"build:bun": "npm run build && node scripts/build-bun.js",
+		"install:bun": "node scripts/install-bun-binary.js",
 		"dev": "tsdown --watch",
 		"turbo:dev": "turbo dev",
 		"turbo:build": "turbo build",

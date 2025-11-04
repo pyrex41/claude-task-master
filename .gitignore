@@ -100,3 +100,7 @@ apps/extension/vsix-build/
 
 # TaskMaster Workflow State (now stored in ~/.taskmaster/sessions/)
 # No longer needed in .gitignore as state is stored globally
+
+# Bun compiled binaries
+task-master-bun
+dist/bin/task-master-bun

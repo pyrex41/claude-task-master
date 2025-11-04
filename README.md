@@ -236,6 +236,43 @@ npm install -g task-master-ai
 npm install task-master-ai
 ```
 
+#### Optional: Install Bun Binary for Better Performance ⚡
+
+For ~45% better CLI performance, you can optionally build and install a Bun-compiled binary:
+
+```bash
+# 1. Install Bun (if not already installed)
+curl -fsSL https://bun.sh/install | bash
+
+# 2. Build the binary
+npm run build:bun
+
+# 3. Install globally
+npm run install:bun
+```
+
+After installation, use `task-master-bun` instead of `task-master`:
+
+```bash
+task-master-bun list    # ~45% faster
+task-master-bun next    # ~45% faster
+```
+
+Or create an alias for convenience:
+
+```bash
+# Add to your ~/.zshrc or ~/.bashrc
+alias tm='task-master-bun'
+
+# Then use: tm list, tm next, etc.
+```
+
+**Performance comparison:**
+- Node.js version: ~850ms
+- Bun binary: ~470ms (45% faster)
+
+> **Note:** The Bun binary is ~78MB but includes everything needed with no dependencies.
+
 #### Initialize a new project
 
 ```bash

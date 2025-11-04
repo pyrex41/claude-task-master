@@ -1,5 +1,7 @@
 <a name="readme-top"></a>
 
+> **⚡ Performance Fork**: This fork includes Bun binary support for ~40% faster CLI performance. See [Fork-Specific Features](#fork-specific-features) below.
+
 <div align='center'>
 <a href="https://trendshift.io/repositories/13971" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13971" alt="eyaltoledano%2Fclaude-task-master | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </div>
@@ -36,6 +38,66 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom)](https://x.com/RalphEcom)
 
 A task management system for AI-driven development with Claude, designed to work seamlessly with Cursor AI.
+
+---
+
+## Fork-Specific Features
+
+This fork adds performance optimizations and plans for a complete rewrite:
+
+### ⚡ Bun Binary Support (Available Now)
+
+Compile Task Master to a standalone Bun binary for ~40% better CLI performance:
+
+```bash
+# 1. Install Bun (if not already installed)
+curl -fsSL https://bun.sh/install | bash
+
+# 2. Clone this fork and install dependencies
+git clone https://github.com/pyrex41/claude-task-master.git
+cd claude-task-master
+npm install
+
+# 3. Build the Bun binary
+npm run build:bun
+
+# 4. Install globally (replaces Node.js version)
+npm run install:bun
+```
+
+**Performance Comparison:**
+- Node.js version: ~800ms
+- Bun binary: ~500ms (37-40% faster)
+
+**Features:**
+- Single ~78MB binary (includes everything, no dependencies)
+- Auto-detects installation location
+- Backs up Node.js version to `task-master.node`
+- Graceful fallback for ASCII art fonts
+
+**To restore Node.js version:**
+```bash
+mv /opt/homebrew/bin/task-master.node /opt/homebrew/bin/task-master
+# or wherever your task-master is installed
+```
+
+### 🚀 Go Rewrite (Planned)
+
+A complete rewrite in Go is planned for 10-20x better performance:
+
+- **Target**: Sub-200ms startup time
+- **Timeline**: 6 weeks to MVP
+- **Features**: Full feature parity with TypeScript version
+- **Binary**: Single 8-15MB executable
+- **See**: [`.taskmaster/docs/prd-port.md`](./.taskmaster/docs/prd-port.md) for complete PRD
+
+**Why Go?**
+- 10-20x faster than Node.js
+- Single binary distribution
+- Excellent AI provider ecosystem
+- 100% data-compatible with current version
+
+---
 
 ## Documentation
 

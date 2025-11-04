@@ -17,6 +17,8 @@ import {
 import { AuthManager } from '../../auth/managers/auth-manager.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { SupabaseAuthClient } from '../../integration/clients/supabase-client.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 /**
  * Factory for creating storage implementations based on configuration
@@ -96,7 +98,23 @@ export class StorageFactory {
 				return StorageFactory.createApiStorage(config);
 
 			case 'auto':
-				// Auto-detect based on authentication status
+				// PERFORMANCE OPTIMIZATION: Fast-path for local file storage (solo mode only)
+				// Check if tasks.json exists locally before initializing AuthManager
+				// This avoids expensive auth/network operations for file-only projects
+				const performanceMode = config.mode || 'standard';
+				
+				if (performanceMode === 'solo') {
+					const tasksJsonPath = path.join(projectPath, '.taskmaster', 'tasks', 'tasks.json');
+					if (fs.existsSync(tasksJsonPath)) {
+						// File exists and no explicit API config - use file storage
+						if (!StorageFactory.isHamsterAvailable(config)) {
+							logger.debug('📁 Using local file storage (fast-path, solo mode)');
+							return StorageFactory.createFileStorage(projectPath, config);
+						}
+					}
+				}
+
+				// Auto-detect based on authentication status (standard mode or when fast-path doesn't apply)
 				const authManager = AuthManager.getInstance();
 
 				// First check if API credentials are explicitly configured

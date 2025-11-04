@@ -79,32 +79,60 @@ export class TmCore {
 	private readonly _projectPath: string;
 	private _configManager!: ConfigManager;
 	private _logger!: Logger;
+	private _performanceMode: 'solo' | 'standard' = 'standard';
 
-	// Private writable properties
-	private _tasks!: TasksDomain;
-	private _auth!: AuthDomain;
-	private _workflow!: WorkflowDomain;
-	private _git!: GitDomain;
-	private _config!: ConfigDomain;
-	private _integration!: IntegrationDomain;
+	// Private writable properties (lazy-initialized in solo mode, eager in standard mode)
+	private _tasks?: TasksDomain;
+	private _auth?: AuthDomain;
+	private _workflow?: WorkflowDomain;
+	private _git?: GitDomain;
+	private _config?: ConfigDomain;
+	private _integration?: IntegrationDomain;
+	private _tasksInitPromise?: Promise<void>;
 
-	// Public readonly getters
+	// Public readonly getters (lazy-loading for performance)
 	get tasks(): TasksDomain {
+		if (!this._tasks) {
+			this._tasks = new TasksDomain(this._configManager);
+			// Start initialization if not already started
+			// Note: Callers must handle the async nature of domain methods
+			if (!this._tasksInitPromise) {
+				this._tasksInitPromise = this._tasks.initialize().catch((error) => {
+					this._logger?.error('Failed to initialize TasksDomain:', error);
+					throw error;
+				});
+			}
+		}
 		return this._tasks;
 	}
 	get auth(): AuthDomain {
+		if (!this._auth) {
+			this._auth = new AuthDomain();
+		}
 		return this._auth;
 	}
 	get workflow(): WorkflowDomain {
+		if (!this._workflow) {
+			this._workflow = new WorkflowDomain(this._configManager);
+		}
 		return this._workflow;
 	}
 	get git(): GitDomain {
+		if (!this._git) {
+			this._git = new GitDomain(this._projectPath);
+		}
 		return this._git;
 	}
 	get config(): ConfigDomain {
+		if (!this._config) {
+			this._config = new ConfigDomain(this._configManager);
+		}
 		return this._config;
 	}
 	get integration(): IntegrationDomain {
+		if (!this._integration) {
+			this._integration = new IntegrationDomain(this._configManager);
+		}
 		return this._integration;
 	}
 	get logger(): Logger {
@@ -169,19 +197,29 @@ export class TmCore {
 				await this._configManager.updateConfig(this._options.configuration);
 			}
 
-			// Initialize domain facades
-			this._tasks = new TasksDomain(this._configManager);
-			this._auth = new AuthDomain();
-			this._workflow = new WorkflowDomain(this._configManager);
-			this._git = new GitDomain(this._projectPath);
-			this._config = new ConfigDomain(this._configManager);
-			this._integration = new IntegrationDomain(this._configManager);
+			// Get performance mode from configuration (defaults to 'standard' for safety)
+			const config = this._configManager.getConfig();
+			this._performanceMode = config.mode || 'standard';
 
-			// Initialize domains that need async setup
-			await this._tasks.initialize();
+			// Initialize domains based on performance mode
+			if (this._performanceMode === 'solo') {
+				// Solo mode: Lazy-load domains for better performance
+				// Domains will be created when accessed via getters
+				this._logger.info('TmCore initialized successfully (solo mode - lazy loading enabled)');
+			} else {
+				// Standard mode: Eager initialization for safety and compatibility
+				this._tasks = new TasksDomain(this._configManager);
+				this._auth = new AuthDomain();
+				this._workflow = new WorkflowDomain(this._configManager);
+				this._git = new GitDomain(this._projectPath);
+				this._config = new ConfigDomain(this._configManager);
+				this._integration = new IntegrationDomain(this._configManager);
 
-			// Log successful initialization
-			this._logger.info('TmCore initialized successfully');
+				// Initialize domains that need async setup
+				await this._tasks.initialize();
+
+				this._logger.info('TmCore initialized successfully (standard mode - eager loading)');
+			}
 		} catch (error) {
 			// Log error if logger is available
 			if (this._logger) {

@@ -3143,6 +3143,30 @@ Examples:
 			return; // Stop execution here
 		});
 
+	// update-check command
+	programInstance
+		.command('update-check')
+		.description('Check for available updates to Task Master')
+		.action(async () => {
+			const currentVersion = getTaskMasterVersion();
+			console.log(`Current version: ${currentVersion}`);
+			console.log('Checking for updates...');
+			
+			const updateInfo = await checkForUpdate(currentVersion);
+			
+			if (updateInfo.needsUpdate) {
+				displayUpgradeNotification(
+					updateInfo.currentVersion,
+					updateInfo.latestVersion,
+					updateInfo.highlights
+				);
+				
+				console.log('\nTo update, run: npm install -g task-master-ai@latest');
+			} else {
+				console.log('✓ You are running the latest version!');
+			}
+		});
+
 	// response-language command
 	programInstance
 		.command('lang')
@@ -4428,6 +4452,45 @@ function setupCLI() {
 }
 
 /**
+ * Check if we should check for updates based on 24h cooldown
+ * @param {string} projectPath - Project root path (optional, uses home dir if not available)
+ * @returns {Promise<boolean>} - True if we should check for updates
+ */
+async function shouldCheckForUpdates(projectPath) {
+	try {
+		// Try project-specific .taskmaster folder first, fall back to home directory
+		const taskmasterDir = projectPath 
+			? path.join(projectPath, '.taskmaster')
+			: path.join(process.env.HOME || process.env.USERPROFILE || '.', '.taskmaster');
+		
+		const lastCheckFile = path.join(taskmasterDir, '.last-update-check');
+		
+		// Ensure directory exists
+		if (!fs.existsSync(taskmasterDir)) {
+			fs.mkdirSync(taskmasterDir, { recursive: true });
+		}
+		
+		// Check if file exists and read timestamp
+		if (fs.existsSync(lastCheckFile)) {
+			const lastCheckTime = parseInt(fs.readFileSync(lastCheckFile, 'utf8').trim(), 10);
+			const now = Date.now();
+			const twentyFourHours = 24 * 60 * 60 * 1000;
+			
+			if (now - lastCheckTime < twentyFourHours) {
+				return false; // Skip check, too soon
+			}
+		}
+		
+		// Update the timestamp
+		fs.writeFileSync(lastCheckFile, Date.now().toString(), 'utf8');
+		return true; // Should check
+	} catch (error) {
+		// If anything fails, err on the side of not checking (performance mode)
+		return false;
+	}
+}
+
+/**
  * Parse arguments and run the CLI
  * @param {Array} argv - Command-line arguments
  */
@@ -4445,26 +4508,50 @@ async function runCLI(argv = process.argv) {
 			process.exit(0);
 		}
 
-		// Check for updates BEFORE executing the command
-		const currentVersion = getTaskMasterVersion();
-		const updateInfo = await checkForUpdate(currentVersion);
+		// Smart update check based on mode and --check-updates flag
+		// In solo mode: Check updates automatically if 24h have passed
+		// In standard mode or with --check-updates: Always check
+		let shouldCheck = argv.includes('--check-updates');
+		
+		// Try to get project path and config mode for solo optimization
+		let projectPath = null;
+		let configMode = 'standard'; // Default to standard for safety
+		
+		try {
+			const taskMaster = initTaskMaster({ requireTasks: false });
+			projectPath = taskMaster.getProjectRoot();
+			const config = await taskMaster.getConfig();
+			configMode = config?.mode || 'standard';
+		} catch (error) {
+			// If we can't load config, default to standard mode (safe)
+		}
+		
+		// In solo mode, check if 24h have passed
+		if (!shouldCheck && configMode === 'solo') {
+			shouldCheck = await shouldCheckForUpdates(projectPath);
+		}
+		
+		if (shouldCheck) {
+			const currentVersion = getTaskMasterVersion();
+			const updateInfo = await checkForUpdate(currentVersion);
 
-		if (updateInfo.needsUpdate) {
-			// Display the upgrade notification first
-			displayUpgradeNotification(
-				updateInfo.currentVersion,
-				updateInfo.latestVersion,
-				updateInfo.highlights
-			);
+			if (updateInfo.needsUpdate) {
+				// Display the upgrade notification first
+				displayUpgradeNotification(
+					updateInfo.currentVersion,
+					updateInfo.latestVersion,
+					updateInfo.highlights
+				);
 
-			// Automatically perform the update
-			const updateSuccess = await performAutoUpdate(updateInfo.latestVersion);
-			if (updateSuccess) {
-				// Restart with the new version - this will execute the user's command
-				restartWithNewVersion(argv);
-				return; // Never reached, but for clarity
+				// Automatically perform the update
+				const updateSuccess = await performAutoUpdate(updateInfo.latestVersion);
+				if (updateSuccess) {
+					// Restart with the new version - this will execute the user's command
+					restartWithNewVersion(argv);
+					return; // Never reached, but for clarity
+				}
+				// If update fails, continue with current version
 			}
-			// If update fails, continue with current version
 		}
 
 		// Setup and parse

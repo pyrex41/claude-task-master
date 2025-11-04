@@ -21,6 +21,13 @@ export type CommitType =
 	| 'chore';
 
 /**
+ * CLI performance mode
+ * - 'solo': Optimized for single developer, file-only usage (lazy loading, caching, fast-path)
+ * - 'standard': Default behavior with all safety checks (eager loading, no caching)
+ */
+export type PerformanceMode = 'solo' | 'standard';
+
+/**
  * Model configuration for different AI roles
  */
 export interface ModelConfig {
@@ -342,6 +349,9 @@ export interface IConfiguration {
 	/** Security settings */
 	security: SecuritySettings;
 
+	/** Performance mode for CLI optimization */
+	mode?: PerformanceMode;
+
 	/** Custom user-defined settings */
 	custom?: Record<string, unknown>;
 
@@ -583,6 +593,9 @@ export const DEFAULT_CONFIG_VALUES = {
 		MAX_REQUESTS_PER_MINUTE: 60,
 		MAX_PROMPT_LENGTH: 100000,
 		ALLOWED_EXTENSIONS: ['.txt', '.md', '.json']
+	},
+	PERFORMANCE: {
+		MODE: 'standard' as PerformanceMode
 	},
 	VERSION: '1.0.0'
 } as const;

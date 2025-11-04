@@ -20,6 +20,14 @@ import { RuntimeStateManager } from '../services/runtime-state-manager.service.j
 import { ConfigPersistence } from '../services/config-persistence.service.js';
 import { EnvironmentConfigProvider } from '../services/environment-config-provider.service.js';
 
+// Simple cache for ConfigManager instances to avoid re-loading config files
+interface CacheEntry {
+	manager: ConfigManager;
+	timestamp: number;
+}
+const CACHE_TTL = 10000; // 10 seconds
+const configCache = new Map<string, CacheEntry>();
+
 /**
  * ConfigManager orchestrates all configuration services
  *
@@ -46,13 +54,46 @@ export class ConfigManager {
 	 * Create and initialize a new ConfigManager instance
 	 * This is the ONLY way to create a ConfigManager
 	 *
+	 * Uses a simple in-memory cache (10s TTL) to avoid re-loading config files
+	 * for sequential CLI commands in the same project.
+	 *
 	 * @param projectRoot - The root directory of the project
 	 * @returns Fully initialized ConfigManager instance
 	 */
 	static async create(projectRoot: string): Promise<ConfigManager> {
+		// Create new instance first to check mode
 		const manager = new ConfigManager(projectRoot);
 		await manager.initialize();
+		
+		// Only cache in solo mode for performance
+		const config = manager.getConfig();
+		const performanceMode = config.mode || 'standard';
+		
+		if (performanceMode === 'solo') {
+			const now = Date.now();
+			const cached = configCache.get(projectRoot);
+
+			// Return cached instance if still valid
+			if (cached && (now - cached.timestamp) < CACHE_TTL) {
+				return cached.manager;
+			}
+
+			// Cache the new instance
+			configCache.set(projectRoot, { manager, timestamp: now });
+		}
+
 		return manager;
+	}
+
+	/**
+	 * Invalidate the cache for a specific project (useful when config changes)
+	 */
+	static invalidateCache(projectRoot?: string): void {
+		if (projectRoot) {
+			configCache.delete(projectRoot);
+		} else {
+			configCache.clear();
+		}
 	}
 
 	/**
@@ -225,6 +266,9 @@ export class ConfigManager {
 		// Save to persistence
 		await this.persistence.saveConfig(this.config);
 
+		// Invalidate cache since config changed
+		ConfigManager.invalidateCache(this.projectRoot);
+
 		// Re-initialize to respect precedence
 		this.initialized = false;
 		await this.initialize();
@@ -239,6 +283,8 @@ export class ConfigManager {
 		}
 		(this.config.custom as any).responseLanguage = language;
 		await this.persistence.saveConfig(this.config);
+		// Invalidate cache since config changed
+		ConfigManager.invalidateCache(this.projectRoot);
 	}
 
 	/**
@@ -249,6 +295,8 @@ export class ConfigManager {
 			createBackup: true,
 			atomic: true
 		});
+		// Invalidate cache since config changed
+		ConfigManager.invalidateCache(this.projectRoot);
 	}
 
 	// ==================== Utilities ====================
